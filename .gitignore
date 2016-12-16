@@ -1,0 +1,6 @@
+junk/
+*.bak
+*.pyc
+*.sublime-*
+*.xlsx
+sftp-config*.json
