@@ -1,5 +1,10 @@
 # wsdm-triple-scoring
 
+This repository contains the code for our submission of [triple scoring task](http://www.wsdm-cup-2017.org/triple-scoring.html) in [WSDM Cup 2017](http://www.wsdm-cup-2017.org/index.html).
+
+We address the task by combining multiple neural network classifiers using gradient boosted regression trees.
+Similar to [past work](http://ad-publications.informatik.uni-freiburg.de/SIGIR_triplescores_BBH_2015.pdf), we train these classifiers using the instances having single class (i.e., profession and nationality) and use them to predict the classes of instances with multiple classes.
+
 ## Installing required packages
 
 First, the required Python packages need to be installed.
@@ -112,7 +117,76 @@ You can train the classifiers using the following commands:
 % python cli.py train_classifier coocc_classifier_dataset_win10_nat_full.joblib coocc_classifier_model_nat_win10_300_balanced_full --dim-size=300 --no-attention --balanced-weight
 ```
 
-### Training scorer
+## Caching classifier results
 
-We use the gradient boosted regression trees (GBRT) to map the outputs of the above-mentioned classifiers to the final scores,
+In order to enable our software to run on a VM machine (TIRA), we cache the results of the above classifiers into one file.
+The cache file can be generated with the following commands:
 
+```bash
+% python cli.py cache_classifier_results --category=pro page_db_pro.db classifier_results_pro.joblib
+% python cli.py cache_classifier_results --category=nat page_db_nat.db classifier_results_nat.joblib
+
+```
+
+## Training scorer
+
+We adopt the gradient boosted regression trees (GBRT) to map the outputs of the above-mentioned classifiers to the final scores.
+We use two models for generating the final scores: the regression model and the binary classification model.
+The regression model directly estimates the final scores (ranging from 0 to 7), whereas the classification model outputs 5 and 2 for the true and false cases, respectively.
+
+Because the training dataset is very small, we adopt the forward feature selection to select the small set of most useful features.
+The feature selection can be run using the following commands:
+
+*Profession*:
+
+```bash
+% python cli.py scorer select_features --k-features=50 --learning-rate=0.04 --max-depth=4 -o features_pro_reg_rate0.04_depth4.json scorer_dataset_pro_reg.joblib
+% python cli.py scorer select_features --k-features=50 --learning-rate=0.01 --max-depth=2 -o features_pro_bin_rate0.01_depth2.json scorer_dataset_pro_bin.joblib
+```
+
+*Nationality*:
+
+```bash
+% python cli.py scorer select_features --k-features=50 --learning-rate=0.03 --max-depth=2 -o features_nat_reg_rate0.03_depth2.json scorer_dataset_nat_reg.joblib
+% python cli.py scorer select_features --k-features=50 --learning-rate=0.01 --max-depth=3 -o features_nat_bin_rate0.01_depth3.json scorer_dataset_nat_bin.joblib
+```
+
+Then, the final GBRT model can be constructed using the following commands:
+
+*Profession*:
+
+```bash
+% python cli.py scorer train_model -f features_pro_reg_rate0.04_depth4.json --learning-rate=0.05 --max-depth=4 --min-samples-split=82 --max-features=9 --subsample=1.0 --n-estimators=3000 scorer_dataset_pro_reg.joblib scorer_model_pro_reg.pickle
+% python cli.py scorer train_model -f features_pro_bin_rate0.01_depth2.json --learning-rate=0.01 --max-depth=2 --min-samples-split=22 --max-features=17 --subsample=1.0 --n-estimators=1000 scorer_dataset_pro_bin.joblib scorer_model_pro_bin.pickle
+```
+
+*Nationality*:
+
+```bash
+% python cli.py scorer train_model -f features_nat_reg_rate0.03_depth2.json --learning-rate=0.045 --max-depth=2 --min-samples-split=47 --max-features=15 --subsample=0.95 --n-estimators=3000 scorer_dataset_nat_reg.joblib scorer_model_nat_reg.pickle
+% python cli.py scorer train_model -f features_nat_bin_rate0.01_depth3.json --learning-rate=0.01 --max-depth=3 --min-samples-split=27 --max-features=11 --subsample=1.0 --n-estimators=3000 scorer_dataset_nat_bin.joblib scorer_model_nat_bin.pickle
+```
+
+Now, the final scoring models (i.e., *scorer_model_pro_reg.pickle*, *scorer_model_pro_bin.pickle*, *scorer_model_nat_reg.pickle*, *scorer_model_nat_bin.pickle*) should appear in the current directory.
+
+## Estimating final scores
+
+The submission file containing final scores is generated using the *run* command:
+
+*Predicting scores using the regression model*:
+
+```bash
+% python cli.py scorer run -i profession.test -i nationality.test -o OUTPUT_DIR
+```
+
+*Predicting scores using the binary model*:
+
+```bash
+% python cli.py scorer run --binary -i profession.test -i nationality.test -o OUTPUT_DIR
+```
+
+The final submission file should appear in *OUTPUT_DIR*.
+
+## License
+
+[Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0)
