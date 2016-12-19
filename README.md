@@ -1,13 +1,13 @@
 # wsdm-triple-scoring
 
-This repository contains the code for our submission of [triple scoring task](http://www.wsdm-cup-2017.org/triple-scoring.html) in [WSDM Cup 2017](http://www.wsdm-cup-2017.org/index.html).
+This repository contains the code of lettuce's submission for [triple scoring task](http://www.wsdm-cup-2017.org/triple-scoring.html) in [WSDM Cup 2017](http://www.wsdm-cup-2017.org/index.html).
 
-We address the task by combining multiple neural network classifiers using gradient boosted regression trees.
-Similar to [past work](http://ad-publications.informatik.uni-freiburg.de/SIGIR_triplescores_BBH_2015.pdf), we train these classifiers using the instances having single class (i.e., profession and nationality) and use them to predict the classes of instances with multiple classes.
+We address this task by combining multiple neural network classifiers using gradient boosted regression trees (GBRT).
+Similar to [past work](http://ad-publications.informatik.uni-freiburg.de/SIGIR_triplescores_BBH_2015.pdf), we train these classifiers using the instances having single class and use them to predict the classes of instances with multiple classes.
 
 ## Installing required packages
 
-First, the required Python packages need to be installed.
+First, you need to install the required Python packages.
 
 ```
 % pip install -r requirements.txt
@@ -35,7 +35,7 @@ In our experiments, we used the Wikipedia dump generated in June 2016.
 
 We combine the outputs of multiple supervised classifiers to compute features for our scoring model.
 
-The first classifier is trained using the bag-of-words (BoW) and bag-of-entities (BoE) in the target Wikipedia pages.
+The first classifier is trained using the bag-of-words (BoW) and the bag-of-entities (BoE) in the target Wikipedia pages.
 
 We train eight classifiers for each category (i.e., profession and nationality) with various training configurations.
 The classifiers can be built by using the following commands:
@@ -47,7 +47,7 @@ The classifiers can be built by using the following commands:
 % python cli.py page_classifier build_dataset --category=nat --test-size=0 page_db_nat.db page_classifier_dataset_nat_full.joblib
 ```
 
-*Training classifiers for profession*:
+*Training classifiers for profession task*:
 
 ```bash
 % python cli.py train_classifier page_classifier_dataset_pro_full.joblib page_classifier_model_pro_attention_300_full --dim-size=300
@@ -60,7 +60,7 @@ The classifiers can be built by using the following commands:
 % python cli.py train_classifier page_classifier_dataset_pro_full.joblib page_classifier_model_pro_entity_300_balanced_full --dim-size=300 --entity-only --balanced-weight --no-attention
 ```
 
-*Training classifiers for nationality*:
+*Training classifiers for nationality task*:
 
 ```bash
 % python cli.py train_classifier page_classifier_dataset_nat_full.joblib page_classifier_model_nat_attention_300_full --dim-size=300
@@ -91,7 +91,7 @@ You can train the classifiers using the following commands:
 % python cli.py coocc_classifier build_dataset --category=nat --test-size=0 coocc_matrix_win10 coocc_classifier_dataset_win10_nat_full.joblib
 ```
 
-*Training classifiers for profession*:
+*Training classifiers for profession task*:
 
 ```bash
 % python cli.py train_classifier coocc_classifier_dataset_win5_pro_full.joblib coocc_classifier_model_pro_attention_win5_300_full --dim-size=300
@@ -104,7 +104,7 @@ You can train the classifiers using the following commands:
 % python cli.py train_classifier coocc_classifier_dataset_win10_pro_full.joblib coocc_classifier_model_pro_win10_300_balanced_full --dim-size=300 --no-attention --balanced-weight
 ```
 
-*Training classifiers for nationality*:
+*Training classifiers for nationality task*:
 
 ```bash
 % python cli.py train_classifier coocc_classifier_dataset_win5_nat_full.joblib coocc_classifier_model_nat_attention_win5_300_full --dim-size=300
@@ -119,13 +119,12 @@ You can train the classifiers using the following commands:
 
 ## Caching classifier results
 
-In order to enable our software to run on a VM machine (TIRA), we cache the results of the above classifiers into one file.
+In order to enable our software to run on a virtual machine ([TIRA](http://www.tira.io/)), we cache the results of the above classifiers into one file.
 The cache file can be generated with the following commands:
 
 ```bash
 % python cli.py cache_classifier_results --category=pro page_db_pro.db classifier_results_pro.joblib
 % python cli.py cache_classifier_results --category=nat page_db_nat.db classifier_results_nat.joblib
-
 ```
 
 ## Training scorer
@@ -134,7 +133,7 @@ We adopt the gradient boosted regression trees (GBRT) to map the outputs of the 
 We use two models for generating the final scores: the regression model and the binary classification model.
 The regression model directly estimates the final scores (ranging from 0 to 7), whereas the classification model outputs 5 and 2 for the true and false cases, respectively.
 
-Because the training dataset is very small, we adopt the forward feature selection to select the small set of most useful features.
+Because the training dataset is very small, we adopt the forward feature selection algorithm to select the small set of most useful features.
 The feature selection can be run using the following commands:
 
 *Profession*:
@@ -171,7 +170,7 @@ Now, the final scoring models (i.e., *scorer_model_pro_reg.pickle*, *scorer_mode
 
 ## Estimating final scores
 
-The submission file containing final scores is generated using the *run* command:
+The submission file is generated using the *run* command:
 
 *Predicting scores using the regression model*:
 
